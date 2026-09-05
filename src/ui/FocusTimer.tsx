@@ -25,6 +25,7 @@ export function FocusTimer({
 
   useEffect(() => {
     if (!open) return;
+    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [open]);
