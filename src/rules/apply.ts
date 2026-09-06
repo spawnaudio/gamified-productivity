@@ -1,9 +1,12 @@
-import { WORK_CREDIT } from "../catalog";
+import { getCatalogItem, WORK_CREDIT } from "../catalog";
+import { isOnBoard, occupiedCells, rectanglesOverlap } from "./geometry";
 import { cloneState } from "./state";
 import type {
   Action,
   ApplyContext,
   AppState,
+  CatalogId,
+  InventoryItem,
   LedgerEntry,
   MutationResult,
 } from "./types";
@@ -136,13 +139,72 @@ export function applyAction(
       session.paid = false;
       return { ok: true, state: next };
     }
-    case "buy":
-    case "place":
-    case "pickUp":
-      return { ok: false, error: "not_found" };
+    case "buy": {
+      if (hasLedger(next, "purchase", action.id)) return { ok: true, state };
+      const item = getCatalogItem(action.catalogId);
+      if (item.price === null) return { ok: false, error: "starter_not_for_sale" };
+      if (next.wallet < item.price) return { ok: false, error: "insufficient_funds" };
+      next.wallet -= item.price;
+      addInventory(next, action.catalogId, 1);
+      next.ledger.push({
+        id: `purchase:${action.id}`,
+        delta: -item.price,
+        source: "purchase",
+        sourceId: action.id,
+        createdAt: action.at,
+      });
+      return { ok: true, state: next };
+    }
+    case "place": {
+      if (next.board.some((piece) => piece.id === action.id)) return { ok: true, state };
+      if (inventoryCount(next, action.catalogId) < 1) {
+        return { ok: false, error: "empty_inventory" };
+      }
+      const cells = occupiedCells(action.catalogId, action.x, action.y, action.rotation);
+      if (!isOnBoard(cells)) return { ok: false, error: "off_board" };
+      for (const piece of next.board) {
+        const taken = occupiedCells(piece.catalogId, piece.x, piece.y, piece.rotation);
+        if (rectanglesOverlap(cells, taken)) return { ok: false, error: "overlap" };
+      }
+      addInventory(next, action.catalogId, -1);
+      next.board.push({
+        id: action.id,
+        catalogId: action.catalogId,
+        x: action.x,
+        y: action.y,
+        rotation: action.rotation,
+      });
+      return { ok: true, state: next };
+    }
+    case "pickUp": {
+      const piece = next.board.find((row) => row.id === action.id);
+      if (!piece) return { ok: false, error: "not_found" };
+      next.board = next.board.filter((row) => row.id !== action.id);
+      addInventory(next, piece.catalogId, 1);
+      return { ok: true, state: next };
+    }
     default: {
       const _exhaustive: never = action;
       return _exhaustive;
     }
   }
+}
+
+function addInventory(state: AppState, catalogId: CatalogId, delta: number): void {
+  const row = state.inventory.find((item) => item.catalogId === catalogId);
+  if (row) {
+    row.count += delta;
+    if (row.count <= 0) {
+      state.inventory = state.inventory.filter((item) => item.catalogId !== catalogId);
+    }
+    return;
+  }
+  if (delta > 0) {
+    const item: InventoryItem = { catalogId, count: delta };
+    state.inventory.push(item);
+  }
+}
+
+function inventoryCount(state: AppState, catalogId: CatalogId): number {
+  return state.inventory.find((item) => item.catalogId === catalogId)?.count ?? 0;
 }

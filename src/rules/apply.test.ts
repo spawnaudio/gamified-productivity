@@ -222,3 +222,153 @@ describe("focus", () => {
     expect(retry.state.wallet).toBe(1);
   });
 });
+
+describe("town", () => {
+  it("buys a path when the wallet can pay, and refuses when it cannot", () => {
+    const broke = applyAction(
+      emptyState(),
+      { type: "buy", id: "b1", catalogId: "path", at: "2026-09-06T10:00:00.000Z" },
+      homeOk,
+    );
+    expect(broke).toEqual({ ok: false, error: "insufficient_funds" });
+
+    const rich = emptyState();
+    rich.wallet = 1;
+    const bought = applyAction(
+      rich,
+      { type: "buy", id: "b1", catalogId: "path", at: "2026-09-06T10:00:00.000Z" },
+      homeOk,
+    );
+    expect(bought.ok).toBe(true);
+    if (!bought.ok) return;
+    expect(bought.state.wallet).toBe(0);
+    expect(bought.state.inventory).toEqual([{ catalogId: "path", count: 1 }]);
+    expect(bought.state.ledger[0]?.delta).toBe(-1);
+  });
+
+  it("does not sell the starter well", () => {
+    const rich = emptyState();
+    rich.wallet = 20;
+    const result = applyAction(
+      rich,
+      { type: "buy", id: "b1", catalogId: "well", at: "2026-09-06T10:00:00.000Z" },
+      homeOk,
+    );
+    expect(result).toEqual({ ok: false, error: "starter_not_for_sale" });
+  });
+
+  it("retries the same buy id without charging twice", () => {
+    const rich = emptyState();
+    rich.wallet = 5;
+    const first = applyAction(
+      rich,
+      { type: "buy", id: "b1", catalogId: "path", at: "2026-09-06T10:00:00.000Z" },
+      homeOk,
+    );
+    if (!first.ok) throw new Error("setup");
+    const retry = applyAction(
+      first.state,
+      { type: "buy", id: "b1", catalogId: "path", at: "2026-09-06T10:00:00.000Z" },
+      homeOk,
+    );
+    expect(retry.ok).toBe(true);
+    if (!retry.ok) return;
+    expect(retry.state.wallet).toBe(4);
+    expect(retry.state.inventory[0]?.count).toBe(1);
+  });
+
+  it("places from inventory and rejects overlap and off-board", () => {
+    const state = emptyState();
+    state.inventory = [{ catalogId: "cottage", count: 1 }];
+    const off = applyAction(
+      state,
+      {
+        type: "place",
+        id: "p1",
+        catalogId: "cottage",
+        x: 15,
+        y: 11,
+        rotation: 0,
+        at: "2026-09-06T10:00:00.000Z",
+      },
+      homeOk,
+    );
+    expect(off).toEqual({ ok: false, error: "off_board" });
+
+    const placed = applyAction(
+      state,
+      {
+        type: "place",
+        id: "p1",
+        catalogId: "cottage",
+        x: 0,
+        y: 0,
+        rotation: 0,
+        at: "2026-09-06T10:00:00.000Z",
+      },
+      homeOk,
+    );
+    if (!placed.ok) throw new Error("setup");
+    expect(placed.state.inventory).toEqual([]);
+    placed.state.inventory = [{ catalogId: "path", count: 1 }];
+    const overlap = applyAction(
+      placed.state,
+      {
+        type: "place",
+        id: "p2",
+        catalogId: "path",
+        x: 1,
+        y: 1,
+        rotation: 0,
+        at: "2026-09-06T10:01:00.000Z",
+      },
+      homeOk,
+    );
+    expect(overlap.ok).toBe(false);
+    if (overlap.ok) return;
+    expect(overlap.error).toBe("overlap");
+  });
+
+  it("cannot place with empty inventory", () => {
+    const result = applyAction(
+      emptyState(),
+      {
+        type: "place",
+        id: "p1",
+        catalogId: "path",
+        x: 0,
+        y: 0,
+        rotation: 0,
+        at: "2026-09-06T10:00:00.000Z",
+      },
+      homeOk,
+    );
+    expect(result).toEqual({ ok: false, error: "empty_inventory" });
+  });
+
+  it("picks up a piece back into inventory at no cost", () => {
+    const state = emptyState();
+    state.inventory = [{ catalogId: "path", count: 1 }];
+    const placed = applyAction(
+      state,
+      {
+        type: "place",
+        id: "p1",
+        catalogId: "path",
+        x: 2,
+        y: 2,
+        rotation: 0,
+        at: "2026-09-06T10:00:00.000Z",
+      },
+      homeOk,
+    );
+    if (!placed.ok) throw new Error("setup");
+    const wallet = placed.state.wallet;
+    const picked = applyAction(placed.state, { type: "pickUp", id: "p1" }, homeOk);
+    expect(picked.ok).toBe(true);
+    if (!picked.ok) return;
+    expect(picked.state.wallet).toBe(wallet);
+    expect(picked.state.board).toHaveLength(0);
+    expect(picked.state.inventory).toEqual([{ catalogId: "path", count: 1 }]);
+  });
+});

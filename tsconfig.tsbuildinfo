@@ -1,0 +1,1 @@
+{"root":["./src/catalog.test.ts","./src/catalog.ts","./src/main.tsx","./src/vite-env.d.ts","./src/rules/apply.test.ts","./src/rules/apply.ts","./src/rules/geometry.test.ts","./src/rules/geometry.ts","./src/rules/state.ts","./src/rules/types.ts"],"version":"5.9.3"}
