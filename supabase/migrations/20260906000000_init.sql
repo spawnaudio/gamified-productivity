@@ -31,6 +31,10 @@ create table public.focus_sessions (
   paid boolean not null default false
 );
 
+create unique index focus_sessions_one_open_per_user
+  on public.focus_sessions (user_id)
+  where ended_at is null;
+
 create table public.wallets (
   user_id uuid primary key references auth.users (id) on delete cascade,
   balance integer not null default 0 check (balance >= 0)
@@ -107,13 +111,13 @@ as $$
 begin
   insert into public.wallets (user_id, balance) values (new.id, 0);
   insert into public.habits (id, user_id, title, archived_at) values
-    ('00000000-0000-4000-8000-000000000001', new.id, 'Make the bed', null),
-    ('00000000-0000-4000-8000-000000000002', new.id, 'Write for ten minutes', null);
+    (gen_random_uuid(), new.id, 'Make the bed', null),
+    (gen_random_uuid(), new.id, 'Write for ten minutes', null);
   insert into public.board_pieces (id, user_id, catalog_id, x, y, rotation) values
-    ('00000000-0000-4000-8000-000000000011', new.id, 'well', 7, 5, 0),
-    ('00000000-0000-4000-8000-000000000012', new.id, 'path', 7, 6, 0),
-    ('00000000-0000-4000-8000-000000000013', new.id, 'path', 7, 7, 0),
-    ('00000000-0000-4000-8000-000000000014', new.id, 'path', 7, 8, 0);
+    (gen_random_uuid(), new.id, 'well', 7, 5, 0),
+    (gen_random_uuid(), new.id, 'path', 7, 6, 0),
+    (gen_random_uuid(), new.id, 'path', 7, 7, 0),
+    (gen_random_uuid(), new.id, 'path', 7, 8, 0);
   return new;
 end;
 $$;
@@ -351,7 +355,8 @@ begin
 
     select i.count into v_inventory_count
       from public.inventory i
-      where i.user_id = uid and i.catalog_id = v_catalog_id;
+      where i.user_id = uid and i.catalog_id = v_catalog_id
+      for update;
     if coalesce(v_inventory_count, 0) < 1 then
       raise exception 'empty_inventory';
     end if;
@@ -376,6 +381,7 @@ begin
     if v_x < 0 or v_y < 0 or v_x + v_width > 16 or v_y + v_height > 12 then
       raise exception 'off_board';
     end if;
+    perform 1 from public.board_pieces where user_id = uid for update;
     if exists (
       select 1 from public.board_pieces p
       cross join lateral (
