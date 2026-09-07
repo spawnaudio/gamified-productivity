@@ -16,6 +16,26 @@ input {
 .work-pane {
   padding: 1rem;
 }
+.home {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  min-height: 100vh;
+}
+.home header,
+.companion header {
+  grid-column: 1 / -1;
+}
+.board {
+  position: relative;
+  background: #e7efe4;
+  background-image: linear-gradient(#ccc 1px, transparent 1px),
+    linear-gradient(90deg, #ccc 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.piece {
+  border: 1px solid #333;
+  background: #c4d7b2;
+}
 .wallet.credited {
   outline: 2px solid currentColor;
 }
