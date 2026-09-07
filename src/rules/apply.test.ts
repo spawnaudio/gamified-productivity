@@ -395,13 +395,30 @@ describe("town", () => {
 });
 
 describe("guards", () => {
-  it("blocks writes when sync is not ok", () => {
+  it("blocks writes when sync is offline", () => {
     const result = applyAction(
       emptyState(),
       { type: "createTask", id: "t1", title: "Invoice", notes: "", at: "2026-09-06T01:00:00.000Z" },
       { layout: "home", sync: "offline" },
     );
     expect(result).toEqual({ ok: false, error: "sync_blocked" });
+  });
+
+  it("allows a complete during syncing so a refetch does not drop the credit", () => {
+    const created = applyAction(
+      emptyState(),
+      { type: "createTask", id: "t1", title: "Invoice", notes: "", at: "2026-09-06T01:00:00.000Z" },
+      homeOk,
+    );
+    if (!created.ok) throw new Error("setup");
+    const result = applyAction(
+      created.state,
+      { type: "completeTask", id: "t1", at: "2026-09-06T01:05:00.000Z" },
+      { layout: "home", sync: "syncing" },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.wallet).toBe(1);
   });
 
   it("forbids buy, place, and pick up on companion", () => {

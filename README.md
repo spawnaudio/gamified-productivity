@@ -12,6 +12,8 @@ A personal dollhouse you earn by finishing real work.
 
 - Web companion: `npm install && npm run dev`
 - Tests: `npm test`
-- Desktop home: `npm run tauri dev`
+- Desktop home: `npm run tauri dev` (requires a Rust/Cargo toolchain)
+
+Magic-link email typically opens the system browser. First sign-in on web is expected until a desktop deep link exists.
 
 Complete a task, tick a habit, or finish a focus session with a note to earn 1. Buy and place only on desktop.

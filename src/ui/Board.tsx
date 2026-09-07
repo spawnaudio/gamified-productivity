@@ -1,5 +1,6 @@
 import { BOARD_HEIGHT, BOARD_WIDTH, CELL_PX, getCatalogItem } from "../catalog";
-import type { Action, BoardPiece, CatalogId, SyncStatus } from "../rules/types";
+import type { Action, BoardPiece, SyncStatus } from "../rules/types";
+import { dropPlaceAction } from "./boardDrop";
 import { canWrite } from "./canWrite";
 import { pieceStyle } from "./pieceStyle";
 
@@ -21,23 +22,21 @@ export function Board({
       onDrop={(event) => {
         event.preventDefault();
         if (locked) return;
-        const catalogId = event.dataTransfer.getData("text/plain") as CatalogId;
         const rect = event.currentTarget.getBoundingClientRect();
-        const x = Math.floor((event.clientX - rect.left) / CELL_PX);
-        const y = Math.floor((event.clientY - rect.top) / CELL_PX);
-        void dispatch({
-          type: "place",
-          id: crypto.randomUUID(),
-          catalogId,
-          x,
-          y,
-          rotation: 0,
-          at: new Date().toISOString(),
-        });
+        const action = dropPlaceAction(
+          event.dataTransfer.getData("text/plain"),
+          Math.floor((event.clientX - rect.left) / CELL_PX),
+          Math.floor((event.clientY - rect.top) / CELL_PX),
+          crypto.randomUUID(),
+          new Date().toISOString(),
+        );
+        if (!action) return;
+        void dispatch(action);
       }}
     >
       {pieces.map((piece) => {
         const box = pieceStyle(piece.catalogId, piece.x, piece.y, piece.rotation, CELL_PX);
+        const item = getCatalogItem(piece.catalogId);
         return (
           <button
             key={piece.id}
@@ -53,7 +52,7 @@ export function Board({
             disabled={locked}
             onClick={() => void dispatch({ type: "pickUp", id: piece.id })}
           >
-            {getCatalogItem(piece.catalogId).name}
+            {item?.name}
           </button>
         );
       })}

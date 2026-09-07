@@ -18,6 +18,13 @@ export const CATALOG: Record<CatalogId, CatalogItem> = {
   library: { id: "library", name: "Library", price: 12, size: { w: 2, h: 2 } },
 };
 
-export function getCatalogItem(id: CatalogId): CatalogItem {
-  return CATALOG[id];
+export function parseCatalogId(id: string): CatalogId | undefined {
+  return id in CATALOG ? (id as CatalogId) : undefined;
+}
+
+export function getCatalogItem(id: CatalogId): CatalogItem;
+export function getCatalogItem(id: string): CatalogItem | undefined;
+export function getCatalogItem(id: string): CatalogItem | undefined {
+  const catalogId = parseCatalogId(id);
+  return catalogId === undefined ? undefined : CATALOG[catalogId];
 }

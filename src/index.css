@@ -21,6 +21,9 @@ input {
   grid-template-columns: 1fr 320px;
   min-height: 100vh;
 }
+.home.home--map-only {
+  grid-template-columns: 1fr;
+}
 .home header,
 .companion header {
   grid-column: 1 / -1;

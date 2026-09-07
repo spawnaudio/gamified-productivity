@@ -20,7 +20,7 @@ export function InventoryPanel({
             event.dataTransfer.setData("text/plain", item.catalogId);
           }}
         >
-          {getCatalogItem(item.catalogId).name} × {item.count}
+          {getCatalogItem(item.catalogId)?.name} × {item.count}
         </li>
       ))}
     </ul>

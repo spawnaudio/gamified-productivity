@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useTownSession } from "./session/useTownSession";
 import { AuthScreen } from "./ui/AuthScreen";
+import { SidePane } from "./ui/SidePane";
 import { SyncBanner } from "./ui/SyncBanner";
 import { TownPane } from "./ui/TownPane";
-import { WorkPane } from "./ui/WorkPane";
 
 export function App() {
   const town = useTownSession();
@@ -11,12 +11,14 @@ export function App() {
   if (!town.session) {
     return <AuthScreen onSubmit={town.signIn} error={town.error} />;
   }
+  const isHome = town.layout === "home";
+  const showSide = town.layout === "companion" || !collapsed;
   return (
-    <main className={town.layout === "home" ? "home" : "companion"}>
+    <main className={isHome ? (collapsed ? "home home--map-only" : "home") : "companion"}>
       <header>
         <h1>Tiny Town</h1>
         <SyncBanner sync={town.sync} />
-        {town.layout === "home" ? (
+        {isHome ? (
           <button type="button" onClick={() => setCollapsed((value) => !value)}>
             {collapsed ? "Show work" : "Hide work"}
           </button>
@@ -25,11 +27,16 @@ export function App() {
           Sign out
         </button>
       </header>
-      {town.layout === "home" ? (
+      {isHome ? (
         <TownPane state={town.state} sync={town.sync} dispatch={town.dispatch} />
       ) : null}
-      {town.layout === "companion" || !collapsed ? (
-        <WorkPane state={town.state} sync={town.sync} dispatch={town.dispatch} />
+      {showSide ? (
+        <SidePane
+          state={town.state}
+          sync={town.sync}
+          dispatch={town.dispatch}
+          showShop={isHome}
+        />
       ) : null}
     </main>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CATALOG, getCatalogItem, WORK_CREDIT } from "./catalog";
+import { CATALOG, getCatalogItem, parseCatalogId, WORK_CREDIT } from "./catalog";
 
 describe("catalog", () => {
   it("lists every v1 item with price and size", () => {
@@ -20,5 +20,12 @@ describe("catalog", () => {
     expect(getCatalogItem("workshop").price).toBe(10);
     expect(getCatalogItem("library").price).toBe(12);
     expect(Object.keys(CATALOG)).toHaveLength(10);
+  });
+
+  it("parses known catalog ids and rejects junk without throwing", () => {
+    expect(parseCatalogId("path")).toBe("path");
+    expect(parseCatalogId("")).toBeUndefined();
+    expect(parseCatalogId("not-a-piece")).toBeUndefined();
+    expect(getCatalogItem("not-a-piece")).toBeUndefined();
   });
 });

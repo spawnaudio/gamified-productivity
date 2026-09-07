@@ -151,6 +151,7 @@ export function applyAction(
     case "buy": {
       if (hasLedger(next, "purchase", action.id)) return { ok: true, state };
       const item = getCatalogItem(action.catalogId);
+      if (!item) return { ok: false, error: "unknown_catalog" };
       if (item.price === null) return { ok: false, error: "starter_not_for_sale" };
       if (next.wallet < item.price) return { ok: false, error: "insufficient_funds" };
       next.wallet -= item.price;
@@ -166,6 +167,7 @@ export function applyAction(
     }
     case "place": {
       if (next.board.some((piece) => piece.id === action.id)) return { ok: true, state };
+      if (!getCatalogItem(action.catalogId)) return { ok: false, error: "unknown_catalog" };
       if (inventoryCount(next, action.catalogId) < 1) {
         return { ok: false, error: "empty_inventory" };
       }

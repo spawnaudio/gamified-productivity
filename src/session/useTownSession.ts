@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getLayoutMode } from "../layout";
-import { applyAction } from "../rules/apply";
 import { emptyState } from "../rules/state";
 import type { Action, AppState, LayoutMode, MutationResult, SyncStatus } from "../rules/types";
 import { supabase } from "../supabase/client";
 import { isAuthSessionError } from "./authError";
+import { commitAction } from "./commitAction";
 import { rowsToState, type TownRows } from "./mapRow";
 
 async function fetchRows(): Promise<TownRows> {
@@ -42,10 +42,15 @@ export function useTownSession() {
   const [state, setState] = useState<AppState>(emptyState());
   const [sync, setSync] = useState<SyncStatus>("syncing");
   const [error, setError] = useState<string | null>(null);
+  const stateRef = useRef(state);
+  const syncRef = useRef(sync);
+  syncRef.current = sync;
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    setState(emptyState());
+    const next = emptyState();
+    stateRef.current = next;
+    setState(next);
     setSession(null);
     setError(null);
     setSync("ok");
@@ -55,7 +60,9 @@ export function useTownSession() {
     setSync("syncing");
     try {
       const rows = await fetchRows();
-      setState(rowsToState(rows));
+      const next = rowsToState(rows);
+      stateRef.current = next;
+      setState(next);
       setSync("ok");
       setError(null);
     } catch (caught) {
@@ -100,15 +107,16 @@ export function useTownSession() {
   }
 
   async function dispatch(action: Action): Promise<MutationResult> {
-    const predicted = applyAction(state, action, { layout, sync });
+    const previous = stateRef.current;
+    const predicted = commitAction(stateRef, action, { layout, sync: syncRef.current });
     if (!predicted.ok) return predicted;
-    const previous = state;
     setState(predicted.state);
     try {
       const { error: rpcError } = await supabase.rpc("apply_action", {
         action: { ...action, layout },
       });
       if (rpcError) {
+        stateRef.current = previous;
         setState(previous);
         if (/fetch|network|Failed to fetch/i.test(rpcError.message)) {
           setSync("offline");
@@ -120,6 +128,7 @@ export function useTownSession() {
       }
       return predicted;
     } catch {
+      stateRef.current = previous;
       setState(previous);
       setSync("offline");
       setError("Can't sync right now.");
