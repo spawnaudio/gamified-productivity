@@ -1,0 +1,44 @@
+:root {
+  color-scheme: light dark;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.4;
+}
+body {
+  margin: 0;
+}
+button,
+input {
+  font: inherit;
+}
+.sync[role="alert"] {
+  color: #a33;
+}
+.work-pane {
+  padding: 1rem;
+}
+.home {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  min-height: 100vh;
+}
+.home.home--map-only {
+  grid-template-columns: 1fr;
+}
+.home header,
+.companion header {
+  grid-column: 1 / -1;
+}
+.board {
+  position: relative;
+  background: #e7efe4;
+  background-image: linear-gradient(#ccc 1px, transparent 1px),
+    linear-gradient(90deg, #ccc 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.piece {
+  border: 1px solid #333;
+  background: #c4d7b2;
+}
+.wallet.credited {
+  outline: 2px solid currentColor;
+}
