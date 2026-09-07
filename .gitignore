@@ -5,3 +5,4 @@ dist/
 Documents/
 *.tsbuildinfo
 .superpowers/
+src-tauri/target/
