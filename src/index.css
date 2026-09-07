@@ -1,0 +1,15 @@
+:root {
+  color-scheme: light dark;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.4;
+}
+body {
+  margin: 0;
+}
+button,
+input {
+  font: inherit;
+}
+.sync[role="alert"] {
+  color: #a33;
+}
