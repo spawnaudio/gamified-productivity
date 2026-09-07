@@ -1,6 +1,7 @@
 import { getCatalogItem, WORK_CREDIT } from "../catalog";
 import { isOnBoard, occupiedCells, rectanglesOverlap } from "./geometry";
 import { cloneState } from "./state";
+import { writesAllowed } from "./writes";
 import type {
   Action,
   ApplyContext,
@@ -36,7 +37,15 @@ export function applyAction(
   action: Action,
   context: ApplyContext,
 ): MutationResult {
-  void context;
+  if (!writesAllowed(context.sync)) {
+    return { ok: false, error: "sync_blocked" };
+  }
+  if (
+    context.layout === "companion" &&
+    (action.type === "buy" || action.type === "place" || action.type === "pickUp")
+  ) {
+    return { ok: false, error: "companion_forbidden" };
+  }
   const next = cloneState(state);
 
   switch (action.type) {

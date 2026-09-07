@@ -393,3 +393,53 @@ describe("town", () => {
     expect(picked.state.inventory).toEqual([{ catalogId: "path", count: 1 }]);
   });
 });
+
+describe("guards", () => {
+  it("blocks writes when sync is not ok", () => {
+    const result = applyAction(
+      emptyState(),
+      { type: "createTask", id: "t1", title: "Invoice", notes: "", at: "2026-09-06T01:00:00.000Z" },
+      { layout: "home", sync: "offline" },
+    );
+    expect(result).toEqual({ ok: false, error: "sync_blocked" });
+  });
+
+  it("forbids buy, place, and pick up on companion", () => {
+    const state = emptyState();
+    state.wallet = 5;
+    state.inventory = [{ catalogId: "path", count: 1 }];
+    state.board = [{ id: "p1", catalogId: "path", x: 0, y: 0, rotation: 0 }];
+    const companion = { layout: "companion" as const, sync: "ok" as const };
+    expect(
+      applyAction(state, { type: "buy", id: "b1", catalogId: "path", at: "2026-09-06T10:00:00.000Z" }, companion),
+    ).toEqual({ ok: false, error: "companion_forbidden" });
+    expect(
+      applyAction(
+        state,
+        {
+          type: "place",
+          id: "p2",
+          catalogId: "path",
+          x: 1,
+          y: 0,
+          rotation: 0,
+          at: "2026-09-06T10:00:00.000Z",
+        },
+        companion,
+      ),
+    ).toEqual({ ok: false, error: "companion_forbidden" });
+    expect(applyAction(state, { type: "pickUp", id: "p1" }, companion)).toEqual({
+      ok: false,
+      error: "companion_forbidden",
+    });
+  });
+
+  it("allows work writes on companion when sync is ok", () => {
+    const result = applyAction(
+      emptyState(),
+      { type: "createTask", id: "t1", title: "Invoice", notes: "", at: "2026-09-06T01:00:00.000Z" },
+      { layout: "companion", sync: "ok" },
+    );
+    expect(result.ok).toBe(true);
+  });
+});
