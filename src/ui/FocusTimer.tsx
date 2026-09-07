@@ -16,12 +16,21 @@ export function FocusTimer({
 }) {
   const locked = !canWrite(sync);
   const open = sessions.find((session) => session.endedAt === null);
+  const openId = open?.id;
   const [note, setNote] = useState("");
   const [minutes, setMinutes] = useState<15 | 25 | 50>(() => {
-    const stored = Number(localStorage.getItem(STORAGE_KEY));
-    return stored === 15 || stored === 50 ? stored : 25;
+    try {
+      const stored = Number(localStorage.getItem(STORAGE_KEY));
+      return stored === 15 || stored === 50 ? stored : 25;
+    } catch {
+      return 25;
+    }
   });
   const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    setNote("");
+  }, [openId]);
 
   useEffect(() => {
     if (!open) return;
@@ -51,15 +60,16 @@ export function FocusTimer({
           </label>
           <button
             type="button"
-            disabled={locked}
-            onClick={() =>
+            disabled={locked || note.trim() === ""}
+            onClick={() => {
+              if (note.trim() === "") return;
               void dispatch({
                 type: "finishFocus",
                 id: open.id,
                 note,
                 at: new Date().toISOString(),
-              })
-            }
+              });
+            }}
           >
             Finish
           </button>
@@ -86,7 +96,11 @@ export function FocusTimer({
               disabled={locked}
               onClick={() => {
                 setMinutes(preset);
-                localStorage.setItem(STORAGE_KEY, String(preset));
+                try {
+                  localStorage.setItem(STORAGE_KEY, String(preset));
+                } catch {
+                  /* missing storage */
+                }
               }}
             >
               {preset}m
