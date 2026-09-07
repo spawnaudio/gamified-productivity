@@ -418,20 +418,22 @@ begin
       raise exception 'overlap';
     end if;
 
-    update public.inventory
-      set count = count - 1
-      where user_id = uid and catalog_id = v_catalog_id;
-    delete from public.inventory where user_id = uid and catalog_id = v_catalog_id and count <= 0;
+    if v_inventory_count = 1 then
+      delete from public.inventory where user_id = uid and catalog_id = v_catalog_id;
+    else
+      update public.inventory
+        set count = count - 1
+        where user_id = uid and catalog_id = v_catalog_id;
+    end if;
     insert into public.board_pieces (id, user_id, catalog_id, x, y, rotation)
     values ((action->>'id')::uuid, uid, v_catalog_id, v_x, v_y, v_rotation);
   elsif kind = 'pickUp' then
-    select p.catalog_id into v_piece_catalog_id
-      from public.board_pieces p
-      where p.id = (action->>'id')::uuid and p.user_id = uid;
-    if v_piece_catalog_id is null then
+    delete from public.board_pieces
+      where id = (action->>'id')::uuid and user_id = uid
+      returning catalog_id into v_piece_catalog_id;
+    if not found then
       raise exception 'not_found';
     end if;
-    delete from public.board_pieces where id = (action->>'id')::uuid and user_id = uid;
     insert into public.inventory (user_id, catalog_id, count)
     values (uid, v_piece_catalog_id, 1)
     on conflict (user_id, catalog_id) do update set count = public.inventory.count + 1;
