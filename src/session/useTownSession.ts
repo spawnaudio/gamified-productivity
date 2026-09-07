@@ -5,6 +5,7 @@ import { applyAction } from "../rules/apply";
 import { emptyState } from "../rules/state";
 import type { Action, AppState, LayoutMode, MutationResult, SyncStatus } from "../rules/types";
 import { supabase } from "../supabase/client";
+import { isAuthSessionError } from "./authError";
 import { rowsToState, type TownRows } from "./mapRow";
 
 async function fetchRows(): Promise<TownRows> {
@@ -42,6 +43,14 @@ export function useTownSession() {
   const [sync, setSync] = useState<SyncStatus>("syncing");
   const [error, setError] = useState<string | null>(null);
 
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    setState(emptyState());
+    setSession(null);
+    setError(null);
+    setSync("ok");
+  }, []);
+
   const reload = useCallback(async () => {
     setSync("syncing");
     try {
@@ -49,11 +58,15 @@ export function useTownSession() {
       setState(rowsToState(rows));
       setSync("ok");
       setError(null);
-    } catch {
+    } catch (caught) {
+      if (isAuthSessionError(caught)) {
+        await signOut();
+        return;
+      }
       setSync("offline");
       setError("Can't sync right now.");
     }
-  }, []);
+  }, [signOut]);
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -76,15 +89,14 @@ export function useTownSession() {
     return () => window.removeEventListener("focus", onFocus);
   }, [session, reload]);
 
-  async function signIn(email: string) {
+  async function signIn(email: string): Promise<boolean> {
     const { error: signInError } = await supabase.auth.signInWithOtp({ email });
-    if (signInError) setError(signInError.message);
-  }
-
-  async function signOut() {
-    await supabase.auth.signOut();
-    setState(emptyState());
-    setSession(null);
+    if (signInError) {
+      setError(signInError.message);
+      return false;
+    }
+    setError(null);
+    return true;
   }
 
   async function dispatch(action: Action): Promise<MutationResult> {
@@ -92,20 +104,27 @@ export function useTownSession() {
     if (!predicted.ok) return predicted;
     const previous = state;
     setState(predicted.state);
-    const { error: rpcError } = await supabase.rpc("apply_action", {
-      action: { ...action, layout },
-    });
-    if (rpcError) {
-      setState(previous);
-      if (/fetch|network|Failed to fetch/i.test(rpcError.message)) {
-        setSync("offline");
-        setError("Can't sync right now.");
-      } else {
-        await reload();
+    try {
+      const { error: rpcError } = await supabase.rpc("apply_action", {
+        action: { ...action, layout },
+      });
+      if (rpcError) {
+        setState(previous);
+        if (/fetch|network|Failed to fetch/i.test(rpcError.message)) {
+          setSync("offline");
+          setError("Can't sync right now.");
+        } else {
+          await reload();
+        }
+        return { ok: false, error: "not_found" };
       }
+      return predicted;
+    } catch {
+      setState(previous);
+      setSync("offline");
+      setError("Can't sync right now.");
       return { ok: false, error: "not_found" };
     }
-    return predicted;
   }
 
   return { session, state, sync, layout, error, signIn, signOut, dispatch, reload };

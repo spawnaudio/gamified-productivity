@@ -4,7 +4,7 @@ export function AuthScreen({
   onSubmit,
   error,
 }: {
-  onSubmit: (email: string) => Promise<void>;
+  onSubmit: (email: string) => Promise<boolean>;
   error: string | null;
 }) {
   const [email, setEmail] = useState("");
@@ -12,8 +12,12 @@ export function AuthScreen({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    await onSubmit(email.trim());
-    setSent(true);
+    try {
+      const ok = await onSubmit(email.trim());
+      setSent(ok);
+    } catch {
+      setSent(false);
+    }
   }
 
   return (
