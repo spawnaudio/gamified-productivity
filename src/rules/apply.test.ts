@@ -329,6 +329,27 @@ describe("town", () => {
     expect(overlap.error).toBe("overlap");
   });
 
+  it("rejects fractional board coordinates", () => {
+    const state = emptyState();
+    state.inventory = [{ catalogId: "path", count: 1 }];
+    const result = applyAction(
+      state,
+      {
+        type: "place",
+        id: "p1",
+        catalogId: "path",
+        x: 15.5,
+        y: 0,
+        rotation: 0,
+        at: "2026-09-06T10:00:00.000Z",
+      },
+      homeOk,
+    );
+    expect(result).toEqual({ ok: false, error: "off_board" });
+    expect(state.inventory).toEqual([{ catalogId: "path", count: 1 }]);
+    expect(state.board).toHaveLength(0);
+  });
+
   it("cannot place with empty inventory", () => {
     const result = applyAction(
       emptyState(),

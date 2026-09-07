@@ -160,6 +160,9 @@ export function applyAction(
       if (inventoryCount(next, action.catalogId) < 1) {
         return { ok: false, error: "empty_inventory" };
       }
+      if (!Number.isInteger(action.x) || !Number.isInteger(action.y)) {
+        return { ok: false, error: "off_board" };
+      }
       const cells = occupiedCells(action.catalogId, action.x, action.y, action.rotation);
       if (!isOnBoard(cells)) return { ok: false, error: "off_board" };
       for (const piece of next.board) {
