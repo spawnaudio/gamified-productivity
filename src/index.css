@@ -13,3 +13,9 @@ input {
 .sync[role="alert"] {
   color: #a33;
 }
+.work-pane {
+  padding: 1rem;
+}
+.wallet.credited {
+  outline: 2px solid currentColor;
+}

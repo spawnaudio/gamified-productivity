@@ -1,6 +1,7 @@
 import { useTownSession } from "./session/useTownSession";
 import { AuthScreen } from "./ui/AuthScreen";
 import { SyncBanner } from "./ui/SyncBanner";
+import { WorkPane } from "./ui/WorkPane";
 
 export function App() {
   const town = useTownSession();
@@ -16,7 +17,7 @@ export function App() {
           Sign out
         </button>
       </header>
-      <p>Wallet {town.state.wallet}</p>
+      <WorkPane state={town.state} sync={town.sync} dispatch={town.dispatch} />
     </main>
   );
 }
